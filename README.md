@@ -1,1 +1,1 @@
-# Data-Mining-Machine-Learning-Course
+# Data Mining & Machine Learning
