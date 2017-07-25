@@ -1,0 +1,237 @@
+---
+title: "Shetty_S_M4"
+author: "Sooraj Shetty"
+date: "February 11, 2017"
+output: word_document
+---
+
+* If necessary install following packages.
+
+`install.packages("ggplot2");`
+`install.packages("useful");`
+`install.packages("cluster"); `
+`install.packages("amap"); `
+`install.packages("energy");`
+`require(factoextra)`
+
+```{r}
+require(ggplot2)
+require(useful)
+require(cluster)
+require(amap)
+require(energy)
+require(factoextra)
+```
+
+```{r}
+data_url <- 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data'
+adult_data <-read.table(url(data_url), sep=",")
+adult_data
+colnames(adult_data)<-c("Age","WorkClass","FnlWgt","Education","EduNum","MaritalStatus","Occupation","Relationship","Race","Sex","CapGain","CapLoss","HrsWeek","NC","Income")
+adult <- adult_data[1:15]
+
+#Removing unnecessary columns (text data)
+adult$WorkClass <- NULL
+adult$FnlWgt <- NULL #Did not know how to use it
+adult$Occupation <- NULL
+adult$Race <- NULL
+adult$NC <- NULL
+adult$Education <- NULL
+adult$MaritalStatus <- NULL
+adult$Relationship <- NULL
+adult$Sex <- NULL
+adult["Income_L"] <- NA
+adult$Income_L <- as.numeric(adult$Income)
+head(adult)
+ad <- adult
+ad$Income <- NULL
+head(ad)
+```
+
+
+```{r}
+# Determining number of clusters 
+sos <- (nrow(ad)-1)*sum(apply(ad,2,var))
+for (i in 2:10) sos[i] <- sum(kmeans(ad, centers=i)$withinss)
+plot(1:10, sos, type="b", xlab="Number of Clusters", ylab="sum of squares")
+```
+
+```{r}
+# Hartigans's rule  FitKMean (similarity)
+# require(useful)
+best<-FitKMeans(ad,max.clusters=10, seed=111) 
+PlotHartigan(best)
+```
+
+
+```{r}
+ad.s <- ad[c("Income_L","Age")] #Correlation between age and income
+ad.s
+```
+
+```{r}
+qplot(x=Age, data=ad.s, geom="density", group=Income_L, color=Income_L)
+```
+
+```{r}
+k<-2
+ad.2.clust<-kmeans(ad.s[,c("Age")],k)
+ad.2.clust
+```
+
+```{r}
+cm<-table(ad.s$Income,ad.2.clust$cluster) #confusion matrix
+cm
+```
+
+```{r}
+plot(cm)
+```
+
+```{r}
+k<-3
+ad.3.clust<-kmeans(ad.s[,c("Age")],k)
+ad.3.clust
+```
+
+```{r}
+cm1<-table(ad.s$Income,ad.3.clust$cluster) #confusion matrix
+cm1
+```
+
+```{r}
+plot(cm1)
+```
+
+
+```{r}
+k<-4
+ad.4.clust<-kmeans(ad.s[,c("Age")],k)
+ad.4.clust
+```
+
+
+```{r}
+cm2<-table(ad.s$Income,ad.4.clust$cluster) #confusion matrix
+cm2
+```
+
+```{r}
+plot(cm2)
+```
+
+
+* How did you choose a k for k-means?
+
+I chose k by performing Hartigans's rule FitKMean (similarity). I have chosen k as 4
+
+###PAM Clustering
+
+```{r}
+gc()
+```
+
+```{r}
+ad.test <- ad[1:1000,] #First 1000 rows
+ad.test
+```
+
+```{r}
+k<-4
+ad.pam.4.clust<- pam(ad.test,k, keep.diss = TRUE, keep.data = TRUE)
+ad.pam.4.clust
+```
+
+###Hierarchical Clustering
+
+Hierarchical clustering.
+```{r}
+ad.h.clust<- hclust(d=dist(ad.test))
+plot(ad.h.clust)
+```
+
+* Evaluate the model performance. How do the clustering approaches compare on the same data?
+
+```{r}
+# Evaluating model performance (for k-means)
+# look at the size of the clusters
+ad.4.clust$size
+
+# look at the cluster centers
+ad.4.clust$centers
+```
+
+The results of k-means and PAM clustering are similar. We can evaluate the two approaches further using confusion matrix and silhoutte plot.
+
+* Generate and plot confusion matrices for the k-means and PAM. What do they tell you?
+
+```{r}
+cma <-table(ad$Income_L,ad.4.clust$cluster)
+cma
+plot(cma)
+cmb <-table(ad.test$Income_L,ad.pam.4.clust$cluster)
+cmb
+plot(cmb)
+```
+
+From the confusion matrix, we understand that both the approaches has segregated the classes completely but have made errors in the other two classes. 
+
+* Generate centroid plots against the 1st two discriminant functions for k-means and PAM. What do they tell you? 
+
+```{r}
+# Centroid plot for k-means
+clusplot(ad, ad.4.clust$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
+# Centroid plot for PAM
+clusplot(ad.test, ad.pam.4.clust$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
+```
+
+The centroid plots of both the clustering techniques show that two of the components overlap slightly with each other while the other component is completely segregated.
+
+* Generate silhouette plots for PAM. What do they tell you?
+
+```{r}
+plot(ad.pam.4.clust, which.plots = 2)
+```
+
+The long lines in the silhouette plot for cluster 1 shows greater within cluster similarity. 
+
+* For the hierarchical clustering use all linkage methods (Single Link, Complete Link, Average Link, Centroid and Minimum energy clustering) and generate dendograms. How do they compare on the same data? 
+
+```{r}
+ad.h.clust.si<- hclust(dist(ad.test), method = "single")
+ad.h.clust.co<- hclust(dist(ad.test), method = "complete")
+ad.h.clust.av<- hclust(dist(ad.test), method = "average")
+ad.h.clust.ce<- hclust(dist(ad.test), method = "centroid")
+plot(ad.h.clust.si, labels = FALSE)
+plot(ad.h.clust.co, labels = FALSE)
+plot(ad.h.clust.av, labels = FALSE)
+plot(ad.h.clust.ce, labels = FALSE)
+plot(energy.hclust(dist(ad.test)),labels = FALSE)
+```
+
+* For the hierarchical clustering use both agglomerative and divisive clustering with a linkage method of your choice and generate dendograms. How do they compare on the same data? 
+
+####Agglomerative clustering:
+
+```{r}
+distance<- dist(ad.test,method = "euclidean") 
+ad_hclust<-hclust(distance, method="single")
+plot(ad_hclust,labels=FALSE)
+```
+
+####Divisive clustering:
+
+```{r}
+dc<-diana(ad.test, diss=inherits(ad.test, "dist"), metric="euclidean")
+plot(dc)
+```
+
+* For the hierarchical clustering use centroid clustering and squared Euclidean distance and generate dendograms. How do they compare on the same data?
+
+```{r}
+### centroid clustering and squared Euclidean distance
+h_c<- hclust(dist(ad.test)^2, "cen")
+plot(h_c,labels=FALSE)
+```
+
+Centroid clustering and squared Euclidean distance results are similar to minimum energy clustering.
