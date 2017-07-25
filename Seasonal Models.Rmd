@@ -1,0 +1,192 @@
+---
+title: "Shetty_S_Assignment_10"
+author: "Sooraj Shetty"
+date: "April 14, 2017"
+output: word_document
+---
+
+```{r}
+library(RCurl)
+library(plyr)
+library(forecast)
+library(ggplot2)
+source(url("http://lib.stat.cmu.edu/general/tsa2/Rcode/itall.R")) 
+
+```
+
+# Assignment
+
+_NOTE: It's your choice to submit EITHER Lesson 02 (ARIMA models) OR Lesson 03 (Trend Analysis) for the module Time Series Analysis._   
+
+  Answer the following questions:   
+    * Can some form of Time series analysis help in your research project to forcast a prediction? 
+    **Arima Model can be used in our research project to forecast prediction
+     
+    * If it can apply Time series analysis to your research project? Does it help?
+    ** Yes it does
+    
+    * If (and only if) you can't use some form of Time series analysis help in your research project then apply a form of Time series analysis to a data set you find at the [UC Irvine Machine Learning Repository](http://archive.ics.uci.edu/ml/)
+    ** Using our project
+
+## I will be using my research project for the time series analysis using ARIMA model to forecast a prediction, It will be helpful as a base for creating the prediction model of the project
+
+
+
+```{r}
+mymodel <- read.csv("train.csv",header = TRUE)
+```
+
+## Converting the data columns into factor
+
+
+```{r }
+
+# Wrangling the data for use
+
+mymodel$Dates <- as.POSIXct(mymodel$Dates, format = "%Y-%m-%d %H:%M:%S")
+mymodel$Date <- (format(mymodel$Dates, "%d"))
+mymodel$Year <- format(mymodel$Dates, "%Y")
+mymodel$months <- (format(mymodel$Dates, "%m"))
+mymodel$Hours <- (format(mymodel$Dates, "%H"))
+
+
+mymodel$Category <- as.factor(mymodel$Category)
+mymodel$DayOfWeek <- as.factor(mymodel$DayOfWeek)
+mymodel$PdDistrict <- as.factor(mymodel$PdDistrict)
+mymodel$Resolution <- as.factor(mymodel$Resolution)
+mymodel$Address <- as.factor(mymodel$Address)
+
+str(mymodel)
+
+```
+
+## converting the columns to numeric for the year, date, months and hours
+
+
+```{r }
+
+mymodel$Year <- as.numeric(mymodel$Year)
+mymodel$Date <- as.numeric(mymodel$Date)
+mymodel$months <- as.numeric(mymodel$months)
+mymodel$Hours <- as.numeric(mymodel$Hours)
+
+```
+
+#Removing the anomalies/outliers?
+
+
+```{r}
+boxplot(mymodel$Y, main = "Plot of San Francisco Longitude")
+nrow(mymodel)
+long <- which(mymodel$Y == 90, arr.ind = T)
+length(long)
+mymodel <- mymodel[-long,]
+nrow(mymodel)
+
+#removing 47 rows where date is NA
+
+mymodel <- mymodel[-which(is.na(mymodel$Dates)),]
+nrow(mymodel)
+
+head(mymodel)
+count(mymodel$Year)
+```
+
+## Adding a column as CategoryMap which will have factor values for category
+
+
+```{r }
+
+
+mymodel$CategoryMap <- mymodel$Category
+
+levels(mymodel$CategoryMap) <- gsub("ARSON", 1, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("ASSAULT", 2, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("BAD CHECKS", 3, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("BRIBERY", 4, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("BURGLARY", 5, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("DISORDERLY CONDUCT", 6, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("DRIVING UNDER THE INFLUENCE", 7, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("DRUG/NARCOTIC", 8, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("DRUNKENNESS", 9, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("EMBEZZLEMENT", 10, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("EXTORTION", 11,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("FAMILY OFFENSES", 12,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("FRAUD", 13, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("FORGERY/COUNTERFEITING", 14,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("GAMBLING", 15, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("KIDNAPPING", 16, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("LARCENY/THEFT", 17, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("LIQUOR LAWS", 18,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("LOITERING", 19, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("MISSING PERSON", 20, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("NON-CRIMINAL", 21, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("OTHER OFFENSES", 22, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("PORNOGRAPHY/OBSCENE MAT", 23, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("PROSTITUTION", 24, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("RECOVERED VEHICLE", 25, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("ROBBERY", 26, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("RUNAWAY", 27, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SECONDARY CODES", 28, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SEX OFFENSES FORCIBLE", 29, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SEX OFFENSES NON FORCIBLE", 30,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("STOLEN PROPERTY", 31,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SUICIDE", 32, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SUSPICIOUS OCC", 33, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("TREA", 34,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("TRESPASS", 35,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("VANDALISM", 36, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("VEHICLE THEFT", 37, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("WARRANTS", 38, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("WEAPON LAWS", 39, levels(mymodel$CategoryMap))
+
+
+```
+
+# Seasonal Models
+
+When there are patterns that repeat over known, fixed periods of time (i.e. day, week, month, quarter, year, etc.) within the data set it is considered to be seasonal variation. One has a model for the periodic fluctuations based on knowledge of the domain.   
+
+The seasonal ARIMA model incorporates both non-seasonal and seasonal factors in a multiplicative model.  In a seasonal ARIMA model, seasonal parameters predict xt using data values and errors at times with lags that are multiples of S (the span of the seasonality).  Before we model for a given data set, one must have an initial guess about the data generation process, that is the span of the seasonality (i.e.day, week, month, quarter, year, etc.)  
+
+
+# Seasonal Models in R
+
+Here we are using an ARIMA model to identify seasonality trends by looking for signficant seasonal differences.  
+
+```{r}
+library(ggplot2)
+head(mymodel)
+mymodel <- count(mymodel, c("Year","months"))
+plot(mymodel[,3], type='o') #  it is difficult to identify seasonality trends here. So,aggregate the data by month to better understand this trend
+
+ggplot(mymodel, aes(x=months, y= freq))+
+  stat_summary(geom = 'line', fun.y='mean')+             # take the mean of each month
+  scale_x_discrete(breaks=seq(1,12,1), labels=seq(1,12,1))+
+  theme_bw()+ # add a little style
+  facet_wrap(~Year) # visualize year by year
+#Since we hypothesize that there is seasonality,
+#we can take the seasonal difference (create a variable that gives the 12TH differences), then look at the ACF and PACF.
+
+mydata<-ts(mymodel[1:100,][,3])
+mydata
+diff_12 <- diff(mydata, 12)
+diff_12
+acf2(diff_12, 48)
+#we see that for both the ACF and PACF we have significant autocorrelation at seasonal (12, 24, 36) lags. The ACF has a cluster around 12, 
+#and not much else besides a tapering pattern throughout. Further, the PACF also has spikes on two multiples of S, AR(2)
+# Try, ARIMA (1,0, 0) x (2, 1, 0)12
+mydata<-ts(mydata, freq=12)
+mod1<-sarima(mydata, 1,0,0,2,1,0,12)
+# install.packages("forecast")
+# Fit the Model
+mod<-Arima(mydata,order=c(1, 0, 0),
+            seasonal=list(order=c(2, 1, 0), period=12))
+mod
+plot(fitted(mod), mod$residuals)
+plot(mod$x, col='red')
+lines(fitted(mod), col='blue')
+# Now, we have a reasonable prediction, we can forecast the model, say 24 months into the future.
+sarima.for(mydata, 24, 1,0,0,2,1,0,12)
+predict(mod, n.ahead=24)
+```
