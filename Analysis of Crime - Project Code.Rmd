@@ -1,0 +1,578 @@
+---
+title: "Analysis of Crime Database in San Francisco"
+author: "Sonam Malhotra & Sooraj Shetty"
+date: "3/27/2017"
+output: word_document
+---
+
+## Description
+Our database is extracted from San Francisco Police department. The sudden growth in the population has brought an inequality in terms of living, housing shortages leading to no scarcity of crime in the city This dataset has the incidents reported from various counties of San Francisco. To protect the privacy of victims, other information like address is provided at the block level. The objective of the project is to predict the requirement of police officers on a specific time in a county where the percentage of crime is high in a day with the help of historical data. This data can also be used to define the zones in the county where it is safe to live or any additional need of police patrolling to prevent crimes.
+
+## Preliminary Results
+Before performing exploratory anlysis on the data, the data has to be cleaned and the relevant information has to be extracted for the analysis
+
+```{r}
+library(RCurl)
+library(plyr)
+library(forecast)
+library(ggplot2)
+library(tseries)
+source(url("http://lib.stat.cmu.edu/general/tsa2/Rcode/itall.R")) 
+
+mymodel <- read.csv("train.csv",header = TRUE)
+
+```
+
+In our dataset the Date column has the information pertaining to when the crime has occured. However, it is not present in a desirable format. Hence, we had to extract this information to perform further analysis.
+
+```{r}
+mymodel$Dates <- as.POSIXct(mymodel$Dates, format = "%Y-%m-%d %H:%M:%S")
+mymodel$Date <- (format(mymodel$Dates, "%d"))
+mymodel$Year <- format(mymodel$Dates, "%Y")
+mymodel$months <- (format(mymodel$Dates, "%m"))
+mymodel$Hours <- (format(mymodel$Dates, "%H"))
+```
+
+Converting the data columns into factor will enable better analysis. Hence, we convert the data columns into factor
+
+```{r}
+mymodel$Category <- as.factor(mymodel$Category)
+mymodel$DayOfWeek <- as.factor(mymodel$DayOfWeek)
+mymodel$PdDistrict <- as.factor(mymodel$PdDistrict)
+mymodel$Resolution <- as.factor(mymodel$Resolution)
+mymodel$Address <- as.factor(mymodel$Address)
+str(mymodel)
+```
+
+However, date is needed in numeric format and hence, we convert the columns to numeric for the year, date, months and hours
+
+```{r}
+mymodel$Year <- as.numeric(mymodel$Year)
+mymodel$Date <- as.numeric(mymodel$Date)
+mymodel$months <- as.numeric(mymodel$months)
+mymodel$Hours <- as.numeric(mymodel$Hours)
+```
+
+Frequency of each element of the dataset provides an insight about the dataset. Higher the frequency higher the occurence. As an example, higher the frequency of any particular crime, higher is it's frequency. This allows us to recognize which areas are affected by which kind of crime. Hence, we calculate the frequency of the each category in the dataset.
+
+```{r}
+mymodel <- na.omit(mymodel)
+category <- data.frame(table(mymodel$Category))
+head(category)
+```
+
+To modify the data for better analysis, we add a column as CategoryMap which will have factor values for category
+
+```{r}
+mymodel$CategoryMap <- mymodel$Category
+
+levels(mymodel$CategoryMap) <- gsub("ARSON", 1, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("ASSAULT", 2, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("BAD CHECKS", 3, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("BRIBERY", 4, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("BURGLARY", 5, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("DISORDERLY CONDUCT", 6, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("DRIVING UNDER THE INFLUENCE", 7, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("DRUG/NARCOTIC", 8, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("DRUNKENNESS", 9, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("EMBEZZLEMENT", 10, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("EXTORTION", 11,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("FAMILY OFFENSES", 12,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("FRAUD", 13, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("FORGERY/COUNTERFEITING", 14,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("GAMBLING", 15, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("KIDNAPPING", 16, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("LARCENY/THEFT", 17, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("LIQUOR LAWS", 18,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("LOITERING", 19, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("MISSING PERSON", 20, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("NON-CRIMINAL", 21, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("OTHER OFFENSES", 22, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("PORNOGRAPHY/OBSCENE MAT", 23, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("PROSTITUTION", 24, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("RECOVERED VEHICLE", 25, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("ROBBERY", 26, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("RUNAWAY", 27, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SECONDARY CODES", 28, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SEX OFFENSES FORCIBLE", 29, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SEX OFFENSES NON FORCIBLE", 30,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("STOLEN PROPERTY", 31,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SUICIDE", 32, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("SUSPICIOUS OCC", 33, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("TREA", 34,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("TRESPASS", 35,levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("VANDALISM", 36, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("VEHICLE THEFT", 37, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("WARRANTS", 38, levels(mymodel$CategoryMap))
+levels(mymodel$CategoryMap) <- gsub("WEAPON LAWS", 39, levels(mymodel$CategoryMap))
+
+```
+
+We further add a column as DayOfWeekMap which will have factor values for day of the week. This will help in classifying the days as wekday or weekend.
+
+```{r}
+mymodel$DayOfWeekMap <- mymodel$DayOfWeek
+
+levels(mymodel$DayOfWeekMap) <- gsub("Sunday", 1, levels(mymodel$DayOfWeekMap))
+levels(mymodel$DayOfWeekMap) <- gsub("Saturday", 1, levels(mymodel$DayOfWeekMap))
+levels(mymodel$DayOfWeekMap) <- gsub("Monday", 0, levels(mymodel$DayOfWeekMap))
+levels(mymodel$DayOfWeekMap) <- gsub("Tuesday", 0, levels(mymodel$DayOfWeekMap))
+levels(mymodel$DayOfWeekMap) <- gsub("Wednesday", 0, levels(mymodel$DayOfWeekMap))
+levels(mymodel$DayOfWeekMap) <- gsub("Thursday", 0, levels(mymodel$DayOfWeekMap))
+levels(mymodel$DayOfWeekMap) <- gsub("Friday", 1, levels(mymodel$DayOfWeekMap))
+```
+
+Now having a preview of our processed data
+
+```{r}
+head(mymodel)
+names(mymodel)
+crime_database<- mymodel
+```
+
+## Exploratory Data Analysis
+
+# Data distribution
+
+How is the data distributed? This is a primary question that arises while performing EDA on the dataset. The graph show that the distribution of variable month and year is normal
+
+```{r}
+summary(mymodel$Category)
+qplot(mymodel$Resolution,data = mymodel)
+ggplot(mymodel,aes(x=months)) + scale_x_continuous(breaks=c(1:12)) +geom_histogram(aes(y= ..density..),
+                 binwidth=.5,
+                 colour="black", fill="white") +
+  geom_density(alpha=.2, fill="#FF6666")
+
+qplot(Category,data = mymodel)
+
+ggplot(mymodel,aes(x= Year)) + scale_x_continuous(breaks=c(1:39)) +
+  geom_histogram(aes(y= ..density..),      # Histogram with density instead of count on y-axis
+                 binwidth=1,
+                 colour="black",fill="white") +
+  geom_density(alpha=.2, fill="#FF6666")  # Overlay with transparent density plot
+```
+
+The graph shows the most number of categories with frequency counts. 
+
+```{r}
+qplot(Category,data=mymodel) +  
+  theme(axis.text.x=element_text(face="bold",color="blue",size=5,angle=90))
+a <- ggplot(mymodel,aes(x=Category,fill=Category))
+a <- a + coord_flip()
+a <- a + stat_count(width=1,colour="white",geom="bar")
+a
+```
+
+
+This graph shows that the distribuiton of crime is normally throughout the location. Significant areas can be observed with higher number of crimes.
+
+```{r}
+qplot(PdDistrict,data=mymodel) +  
+  theme(axis.text.x=element_text(face="bold",color="blue",size=5,angle=90))
+
+## This graph shows the resolution/outcome of crimes with number of counts
+b <- ggplot(mymodel,aes(x=Resolution,fill=Resolution))
+b <- b + geom_bar(width=2,colour="white") 
+b <- b + geom_text(aes(y=..count..,label=..count..),
+                   stat="count",color="white",
+                   hjust=1.0,size=3)
+b <- b + theme(legend.position="none")
+b <- b + stat_count(width=1,colour="white",geom="bar")
+b
+```
+
+The above plot shows that the data is distributed normally with a peak around the year 1990-2000
+
+We create the log transformed graph for this variable for further looking into the distribution. The log transformed graph suggests that the data is distributed normally.
+
+```{r}
+qplot(months,data=mymodel)
+qplot(x=log(months+1,2),data=mymodel,color=I('red'),fill=I('blue'))
+qplot(x=log(months+1,2),data=mymodel,color=I('red'),fill=I('blue'),xlim=c(1,20))
+```
+
+# Checking the dataset for anomalies/outliers. 
+This allows us to identify the data which does not come together with majority of data. Of course, there are anomalies in the data, removing which will enable us to create the anomaly free data
+
+```{r}
+boxplot(mymodel$Y, main = "Plot of San Francisco Longitude")
+long <- which(mymodel$Y == 90, arr.ind = T)
+nrow(long)
+length(long)
+mymodel <- mymodel[-long,]
+nrow(mymodel)
+
+train <- mymodel
+```
+
+## Unsupervised learning 
+
+
+```{r}
+library(arules)
+u1 <- mymodel[c("Year","months","Hours","CategoryMap","DayOfWeekMap")]  
+
+u2 <- data.frame(as.factor(u1$Year),as.factor(u1$months),as.factor(u1$Hours),as.factor(u1$CategoryMap),as.factor(u1$DayOfWeekMap))
+
+colnames(u2) <- c("Year","months","Hours","CategoryMap","DayOfWeekMap")
+
+u3 <- as(u2,"transactions")
+```
+
+
+
+```{r}
+# look at the first five transactions
+
+inspect(u3[1:5])
+
+# Look at the frequency 
+
+itemFrequency(u3[1:100, 1:13])
+
+# plot the frequency
+head(u3)
+itemFrequencyPlot(u3,support=0.1)
+itemFrequencyPlot(u3,topN=20)
+
+# Generate a set of 50 or so (non-redundant) rules.
+
+crime.rules<-apriori(u3)
+summary(crime.rules)
+```
+
+Improving model performance.
+
+```{r}
+
+crime.rules.2 <- apriori(u3, parameter = list(support = 0.01, confidence = 0.5, minlen = 1))
+crime.rules.2
+
+
+# converting the rule set to a data frame
+Rulesdataframe<- as(crime.rules.2, "data.frame")
+str(Rulesdataframe)
+```
+
+Pruning redundant rules.
+
+```{r}
+
+subset.matrix <- is.subset(crime.rules.2, crime.rules.2)
+subset.matrix[lower.tri(subset.matrix, diag=T)] <- NA
+redundant <- colSums(subset.matrix, na.rm=T) >= 1
+which(redundant)
+
+# remove redundant rules
+rules.pruned <- crime.rules.2[!redundant]
+inspect(rules.pruned)
+```
+
+Conviction:
+
+```{r}
+
+conviction <- interestMeasure(rules.pruned, "conviction", transactions=u3)
+rules.conviction<-as(rules.pruned, "data.frame")
+rules.conviction<-data.frame(rules.conviction, conviction)
+rules.conviction
+```
+
+* Visualize your 50 association rules. Where do the best and worst end up in your plot? 
+
+```{r}
+library(arulesViz)
+
+plot(crime.rules.2)
+plot(crime.rules.2, method="graph", control=list(type="items"))
+plot(crime.rules.2, method="paracoord", control=list(reorder=TRUE))
+plot(crime.rules.2, method="grouped", control=list(reorder=TRUE))
+
+```
+
+## Supervised learning 
+
+Rearranging the data
+
+```{r}
+u1 <- mymodel[c("Hours","CategoryMap")]  
+u2 <- data.frame(as.numeric(u1$Hours),as.numeric(u1$CategoryMap))
+colnames(u2) <- c("Hours","CategoryMap")
+table(u2$CategoryMap)
+
+class <- u2[,1]
+leaf <- u2[1:90,1:2]
+shuff<-runif(nrow(leaf))
+leaf<-leaf[order(shuff),]
+class <- class[order(shuff)]
+```
+
+Scaling the data
+
+```{r}
+leaf.scaled<-as.data.frame(lapply(leaf, scale))
+head(leaf.scaled)
+summary(leaf.scaled)
+```
+
+Normalizing the data
+```{r}
+normalize<- function(x) {
+  return((x-min(x))/(max(x)-min(x)))
+}
+leaf.normalized<-as.data.frame(lapply(leaf,normalize))
+leaf.scaled.normalized<-as.data.frame(lapply(leaf.scaled, normalize))
+head(leaf.normalized)
+#Different sized datasets
+train <- 1:75
+train_small <- 1:50
+test <- 76:90
+test_large <- 51:90
+class <- as.factor(class)
+```
+
+##Decision Tree
+
+```{r}
+library(C50)
+model <- C5.0(leaf.scaled.normalized[train,], class[train])
+model_small <- C5.0(leaf.scaled.normalized[train_small,], class[train_small])
+model_no_scale <- C5.0(leaf.normalized[train,], class[train])
+model_no_norm <- C5.0(leaf.scaled[train,], class[train])
+model_no_ns <- C5.0(leaf[train,], class[train])
+
+summary(model)
+summary(model_small)
+summary(model_no_scale)
+summary(model_no_norm)
+summary(model_no_ns)
+```
+
+## Time Series Analysis
+
+# Autoregressive integrated moving average (ARIMA)
+
+An autoregressive integrated moving average (ARIMA or ARMA) model combines an autoregressive component with a moving average component in to a single model.   
+
+# Time series analysis & Predictiona Model in R
+
+The ts() function will convert a numeric vector into an R time series object. The format is ts(vector, start=, end=, frequency=) where start and end are the times of the first and last observation and frequency is the number of observations per unit time (1=annual, 4=quartly, 12=monthly, etc.).   
+
+
+```{r}
+crimes<- count(mymodel,c("Year", "months"))
+head(crimes)
+
+# set the freq parameter to 12 to indicate monthly readings
+
+crime_timeseries <- ts(crimes$freq, start = c(2003, 1), end = c(2015, 1), frequency = 12)   
+
+plot(crime_timeseries, xlab='Years' ,ylab='Number of crimes', main='Crime between between 2003-2015')
+
+
+## -------------   USE ARIMA MODEL  ---------------------
+#creating ranges of possible values for the order parameters p, d, and q.
+
+
+d <- 0 : 2
+p <- 0 : 6
+q <- 0 : 6
+
+crime_models <- expand.grid(d = d, p = p, q = q)
+
+
+head(crime_models, n = 4)
+
+getTSModelAIC <- function(ts_mymodel, p, d, q) {
+                                            ts_model <- arima(ts_mymodel, order = c(p, d, q))
+                                              return(ts_model$aic)
+                                              }
+
+
+getTSModelAICSafe <- function(ts_mymodel, p, d, q) {  
+                                                 result = tryCatch({
+                                                 getTSModelAIC(ts_mymodel, p, d, q)
+                                                  }, error = function(e) {
+                                                 Inf
+                                                 })
+                                                 }
+ 
+ # PICK THE BEST MODEL THAT HAS THE SMALLEST AIC 
+
+crime_models$aic <- mapply(function(x, y, z) 
+                              getTSModelAICSafe(crime_timeseries, x, y, z), crime_models$p, 
+                              crime_models$d, crime_models$q)
+
+subset(crime_models,aic == min(aic))
+
+# ARIMA model for best p,d,q order model 
+
+crime_model <- arima(crime_timeseries, order = c(2, 4, 6))
+summary(crime_model)
+
+
+#-------------------       Prediction    ---------------------------------
+
+plot(forecast(crime_model, 20))
+```
+
+# Seasonal Models
+
+When there are patterns that repeat over known, fixed periods of time (i.e. day, week, month, quarter, year, etc.) within the data set it is considered to be seasonal variation. One has a model for the periodic fluctuations based on knowledge of the domain.   
+
+The seasonal ARIMA model incorporates both non-seasonal and seasonal factors in a multiplicative model.   
+
+# Seasonal Models in R
+
+Here we are using an ARIMA model to identify seasonality trends by looking for signficant seasonal differences.  
+
+```{r}
+
+mymodel <- count(mymodel, c("Year","months"))
+plot(mymodel[,3], type='o') #Aggregate the data by month
+
+ggplot(mymodel, aes(x=months, y= freq))+
+stat_summary(geom = 'line', fun.y='mean')+ # take the mean of eachmonth
+scale_x_discrete(breaks=seq(1,12,1), labels=seq(1,12,1))+
+theme_bw()+ 
+facet_wrap(~Year) # year by year
+
+
+#Looking at the ACF and PACF.
+
+mydata<-ts(mymodel[1:100,][,3])
+mydata
+diff_12 <- diff(mydata, 12)
+diff_12
+acf2(diff_12, 48)
+
+
+mydata<-ts(mydata, freq=12)
+ace1<-sarima(mydata, 1,0,0,2,1,0,12)
+
+ace<-Arima(mydata,order=c(1, 0, 0),
+            seasonal=list(order=c(2, 1, 0), period=12))
+
+ace
+
+plot(fitted(ace), ace$residuals)
+plot(ace$x, col='red')
+lines(fitted(ace), col='blue')
+
+# Now, we have a reasonable prediction, we can forecast the model, say 24 months into the future.
+
+sarima.for(mydata, 24, 1,0,0,2,1,0,12)
+predict(ace, n.ahead=24)
+```
+
+#  Trend Analysis
+
+Trend Analysis is the practice of collecting information and attempting to spot a pattern, or trend, in the information. Typically this involves analyzing the variance for a change over time. The null hypothesis: $H_0$ is that there is no trend. Many techniques can be used to identify trends, we'll use an ARMA model again. 
+
+# Trend Analysis in R
+
+```{r}
+
+#-----------  CRIME TRENDS  --------
+crimeT <- count(mymodel, c("months"))
+head(crimeT)
+plot(crimeT,type='l',xlab='Time',main='Crime Trends')
+acf(crimeT)
+var(crimeT)
+
+#------------- Random Walk -------------
+crime_rw<- count(mymodel, c("months"))
+head(crime_rw)
+plot(crime_rw,type='l',xlab='Time',main='Crime Trends - Random Walk')
+acf(diff(as.numeric(unlist(crime_rw))))
+
+#----------------------------- ARMA model  ----------------------
+
+# Moving Average Model
+ma_cr1 <- arima.sim(model = list(crime_rw, sd = 1.2), n = 1000)
+head(ma_cr1, n = 8)
+acf(ma_cr1)
+
+# Autoregressive model
+ma_cr2 <- arima.sim(model = list(crime_rw, sd = 1.2), n = 1000)
+acf(ma_cr2)
+pacf(ma_cr2)
+
+#--------------Dickey-Fuller for stationarity -----------------------
+crime_rwS<- count(mymodel,c("Year", "months"))
+adf.test(crime_rwS$months, alternative = "stationary")
+
+#------------ Another unit root test : Philips-Perron test -------
+PP.test(crime_rwS$months)
+
+# ------------     Seasonal Trend Decomposition in R  --------
+
+#The Seasonal Trend Decomposition using Loess (STL) is an algorithm that was developed 
+#to help to divide up a time series into three components namely: the trend, seasonality and remainder.
+
+myts <- ts(crime_rwS[,2], start=c(2009, 1), end=c(2014, 12), frequency=12) 
+crime.stl <- stl(myts, s.window="periodic")
+plot(crime.stl)
+
+# ------------     Monthly Trend Decomposition in R  --------
+
+ggplot(data=crime_database, aes(x= months)) +
+  geom_bar(colour="black", fill="green") +
+  ylab('Count') +
+  facet_wrap(~Category, scales='free')
+
+# ------------     Mapping in R  --------
+
+library(rworldmap)
+library(ggmap)
+
+crime_map<-crime_database[1:2000,]
+
+
+qmplot(X, Y, data = crime_map, colour = I('red'), size = I(3), darken = .3)
+
+set.seed(500)
+
+df <- round(data.frame(
+  x = jitter(rep(-122.3951, 50), amount = .2),
+  y = jitter(rep( 37.7134, 50), amount = .2)
+), digits = 2)
+map <- get_googlemap('San franscisco', markers = df, path = df, scale = 2)
+ggmap(map, extent = 'normal')
+
+
+# find a reasonable spatial extent
+
+theme_set(theme_bw(16))
+
+qmap('San Francisco', zoom = 14)
+
+
+SanfranciscoMap <- qmap("San Francisco", zoom = 14, color = "bw",
+                        extent = "device", legend = "topleft")
+
+SanfranciscoMap +
+  stat_bin2d(
+    aes(x = X, y = Y, colour = Category, fill = Category),
+    size = .5, bins = 30, alpha = 1/2,
+    data = crime_map
+  )
+
+SanfranciscoMap +
+  stat_density2d(
+    aes(x = X, y = Y, fill = ..level.., alpha = ..level..),
+    size = 2, bins = 4, data = crime_map,
+    geom = "polygon"
+  )
+
+SanfranciscoMap +
+  stat_density2d(aes(x = X, y = Y, fill = ..level.., alpha = ..level..),
+                 bins = 5, geom = "polygon",
+                 data = crime_map) +
+  scale_fill_gradient(low = "black", high = "red") +
+  facet_wrap(~ DayOfWeek)
+
+
+```
+
