@@ -1,0 +1,210 @@
+---
+title: "Shetty_S_M7_kNN"
+author: "Sooraj Shetty"
+date: "March 5, 2017"
+output: word_document
+---
+
+Load the necessary libraries as per requirement
+
+```{r}
+require(ggplot2)
+require(class)
+require(useful)
+require(cluster)
+require(amap)
+require(energy)
+require(gmodels)
+```
+
+Loading my data - Teaching Assistant Evaluation Data Set 
+
+```{r}
+data_url <- 'https://archive.ics.uci.edu/ml/machine-learning-databases/tae/tae.data'
+TAE <- read.csv(url(data_url),sep=",",header = FALSE)
+head(TAE)
+```
+
+```{r}
+names(TAE)
+table(TAE$V6)
+TAE$V6
+length(TAE$V6)
+```
+
+V6 <- Class attribute (categorical) 1=Low, 2=Medium, 3=High
+
+Above information is obtained from the UCI website.
+
+Below I am estimating number of clusters in my dataset for further analysis.
+
+I am using Hartigan's Rule for this purpose.
+
+```{r}
+# Hartigans's rule  FitKMean (similarity)
+# require(useful)
+best<-FitKMeans(TAE,max.clusters=15, seed=111) 
+PlotHartigan(best)
+```
+
+```{r}
+# Determining number of clusters 
+sos <- (nrow(TAE)-1)*sum(apply(TAE,2,var))
+for (i in 2:10) sos[i] <- sum(kmeans(TAE, centers=i)$withinss)
+plot(1:10, sos, type="b", xlab="Number of Clusters", ylab="sum of squares")
+```
+
+Scaling the data
+
+```{r}
+TAE.scaled<-as.data.frame(lapply(TAE[,c(1:5)], scale))
+head(TAE.scaled)
+```
+
+Normalizing the numeric data in dataset with exception of cloumn V6 [target]. The normalization brings all values to a common format.
+
+```{r}
+normalize <- function(x) {
+return ((x - min(x)) / (max(x) - min(x))) }
+
+TAE_n <- as.data.frame(lapply(TAE[1:6], normalize))
+
+#Following summaries will show the normalization of numeric data
+summary(TAE_n$V1)
+summary(TAE_n$V2)
+summary(TAE_n$V3)
+summary(TAE_n$V4)
+summary(TAE_n$V5)
+summary(TAE_n$V6)
+```
+
+
+Forming training & test datasets from the normalized dataset
+
+```{r}
+TAE_train <- TAE_n[1:75, 1:5] # First 75 rows
+head(TAE_train)
+TAE_test <- TAE_n[76:151, 1:5] # Next 76 rows
+head(TAE_test)
+```
+
+The target variable which we have not included in our training and test data sets.
+
+```{r}
+TAE_train_labels <- TAE[1:75, 6]
+TAE_train_labels
+TAE_test_labels <- TAE[76:151, 6]
+TAE_test_labels
+```
+
+k=2
+
+```{r}
+TAE_test_pred <- knn(TAE_train,TAE_test,TAE_train_labels,k=2)
+TAE_test_pred
+```
+
+```{r}
+CrossTable(TAE_test_labels,TAE_test_pred, prop.chisq = FALSE)
+```
+
+```{r}
+cm <- table(TAE_test_labels,TAE_test_pred)
+cm
+```
+
+k=3
+
+```{r}
+TAE_test_pred1 <- knn(TAE_train,TAE_test,TAE_train_labels,k=3)
+TAE_test_pred1
+```
+
+```{r}
+CrossTable(TAE_test_labels,TAE_test_pred1, prop.chisq = FALSE)
+```
+
+```{r}
+cm1 <- table(TAE_test_labels,TAE_test_pred1)
+cm1
+```
+
+k=5
+
+```{r}
+TAE_test_pred2 <- knn(TAE_train,TAE_test,TAE_train_labels,k=5)
+TAE_test_pred2
+```
+
+```{r}
+CrossTable(TAE_test_labels,TAE_test_pred2, prop.chisq = FALSE)
+```
+
+```{r}
+cm2 <- table(TAE_test_labels,TAE_test_pred2)
+cm2
+```
+
+k=6
+
+```{r}
+TAE_test_pred3 <- knn(TAE_train,TAE_test,TAE_train_labels,k=6)
+TAE_test_pred3
+```
+
+```{r}
+CrossTable(TAE_test_labels,TAE_test_pred3,prop.chisq = FALSE)
+```
+
+```{r}
+cm3 <- table(TAE_test_labels,TAE_test_pred3)
+cm3
+```
+
+k=12
+
+```{r}
+TAE_test_pred4 <- knn(TAE_train,TAE_test,TAE_train_labels,k=12)
+TAE_test_pred4
+```
+
+```{r}
+CrossTable(TAE_test_labels,TAE_test_pred4,prop.chisq = FALSE)
+```
+
+```{r}
+cm4 <- table(TAE_test_labels,TAE_test_pred4)
+cm4
+```
+
+k=15
+
+```{r}
+TAE_test_pred5 <- knn(TAE_train,TAE_test,TAE_train_labels,k=15)
+TAE_test_pred5
+```
+
+```{r}
+CrossTable(TAE_test_labels,TAE_test_pred5,prop.chisq = FALSE)
+```
+
+```{r}
+cm5 <- table(TAE_test_labels,TAE_test_pred5)
+cm5
+```
+
+For the model I have created crosstables for different values of k. 
+
+But, the accuracy of the predicted values as to whether they match up with the known values is necessary. 
+
+Accuracy of model for k =  2 is 36.84%
+
+Accuracy of model for k =  3 is 39.47%
+
+Accuracy of model for k =  5 is 46.05%
+
+Accuracy of model for k =  6 is 40.78%
+
+Accuracy of model for k = 12 is 43.42% 
+
+Accuracy of model for k = 15 is 50% [Highest accuracy]
