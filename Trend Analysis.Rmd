@@ -1,0 +1,184 @@
+---
+title: "Module 10 - Trend Analysis"
+author: "Sooraj Shetty"
+date: "April 17, 2017"
+output: word_document
+---
+
+## For this module I will be using my research project for the time series analysis using trend analysis to forecast a prediction. Hence the initial part of the assignment is data wrangling for my project. It will be helpful as a base for creating the prediction model of the project.
+
+Loading the required libraries
+
+```{r}
+library(RCurl)
+library(plyr)
+library(forecast)
+library(tseries)
+```
+
+Loading the training data for the assignment (and project)
+
+```{r}
+train <- read.csv("train.csv",header = TRUE)
+```
+
+Converting the data columns into factor
+
+```{r }
+# Wrangling the data for use
+
+train$Dates <- as.POSIXct(train$Dates, format = "%Y-%m-%d %H:%M:%S")
+train$Date <- (format(train$Dates, "%d"))
+train$Year <- format(train$Dates, "%Y")
+train$months <- (format(train$Dates, "%m"))
+train$Hours <- (format(train$Dates, "%H"))
+
+train$Category <- as.factor(train$Category)
+train$DayOfWeek <- as.factor(train$DayOfWeek)
+train$PdDistrict <- as.factor(train$PdDistrict)
+train$Resolution <- as.factor(train$Resolution)
+train$Address <- as.factor(train$Address)
+
+str(train)
+```
+
+Converting the columns to numeric for the year, date, months and hours
+
+```{r }
+train$Year <- as.numeric(train$Year)
+train$Date <- as.numeric(train$Date)
+train$months <- as.numeric(train$months)
+train$Hours <- as.numeric(train$Hours)
+```
+
+Removing the anomalies/outliers?
+
+```{r}
+boxplot(train$Y, main = "Plot of San Francisco Longitude")
+nrow(train)
+long <- which(train$Y == 90, arr.ind = T)
+length(long)
+train <- train[-long,]
+nrow(train)
+
+#removing 47 rows where date is NA
+
+train <- train[-which(is.na(train$Dates)),]
+nrow(train)
+head(train)
+count(train$Year)
+```
+
+Adding a column as CategoryMap which will have factor values for category
+
+```{r }
+train$CategoryMap <- train$Category
+
+levels(train$CategoryMap) <- gsub("ARSON", 1, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("ASSAULT", 2, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("BAD CHECKS", 3, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("BRIBERY", 4, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("BURGLARY", 5, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("DISORDERLY CONDUCT", 6, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("DRIVING UNDER THE INFLUENCE", 7, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("DRUG/NARCOTIC", 8, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("DRUNKENNESS", 9, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("EMBEZZLEMENT", 10, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("EXTORTION", 11,levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("FAMILY OFFENSES", 12,levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("FRAUD", 13, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("FORGERY/COUNTERFEITING", 14,levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("GAMBLING", 15, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("KIDNAPPING", 16, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("LARCENY/THEFT", 17, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("LIQUOR LAWS", 18,levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("LOITERING", 19, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("MISSING PERSON", 20, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("NON-CRIMINAL", 21, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("OTHER OFFENSES", 22, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("PORNOGRAPHY/OBSCENE MAT", 23, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("PROSTITUTION", 24, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("RECOVERED VEHICLE", 25, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("ROBBERY", 26, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("RUNAWAY", 27, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("SECONDARY CODES", 28, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("SEX OFFENSES FORCIBLE", 29, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("SEX OFFENSES NON FORCIBLE", 30,levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("STOLEN PROPERTY", 31,levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("SUICIDE", 32, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("SUSPICIOUS OCC", 33, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("TREA", 34,levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("TRESPASS", 35,levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("VANDALISM", 36, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("VEHICLE THEFT", 37, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("WARRANTS", 38, levels(train$CategoryMap))
+levels(train$CategoryMap) <- gsub("WEAPON LAWS", 39, levels(train$CategoryMap))
+```
+
+# Assingment
+
+_NOTE: It's your choice to submit EITHER Lesson 02 (ARIMA models) OR Lesson 03 (Trend Analysis) for the module Time Series Analysis._   
+
+  Answer the following questions:   
+    * Can some form of Time series analysis help in your research project to forcast a prediction?    
+    * If it can apply Time series analysis to your research project? Does it help?     
+    * If (and only if) you can't use some form of Time series analysis help in your research project then apply a form of Time series analysis to a data set you find at the [UC Irvine Machine Learning Repository](http://archive.ics.uci.edu/ml/)          
+
+#  Trend Analysis
+
+Trend Analysis is the practice of collecting information and attempting to spot a pattern, or trend, in the information. Typically this involves analyzing the variance for a change over time. The null hypothesis: $H_0$ is that there is no trend. Many techniques can be used to identify trends, we'll use an ARMA model again. 
+
+# Trend Analysis in R
+
+```{r}
+#-----------  CRIME TRENDS  --------
+crime<- count(train,c("months"))
+head(crime)
+plot(crime,type='l',xlab='Time',main='Crime Trends')
+acf(crime)
+var(crime)
+
+#------------- Random Walk -------------
+crime_rw<- count(train,c("months"))
+head(crime_rw)
+plot(crime_rw,type='l',xlab='Time',main='Crime Trends - Random Walk')
+acf(diff(as.numeric(unlist(crime_rw))))
+```
+
+```{r}
+#----------------------------- ARMA model  ----------------------
+
+# Moving Average Model
+ma_cr1 <- arima.sim(model = list(crime_rw, sd = 1.2), n = 1000)
+head(ma_cr1, n = 8)
+acf(ma_cr1)
+```
+
+```{r}
+# Autoregressive model
+ma_cr2 <- arima.sim(model = list(crime_rw, sd = 1.2), n = 1000)
+acf(ma_cr2)
+pacf(ma_cr2)
+```
+
+```{r}
+#--------------Dickey-Fuller for stationarity -----------------------
+crime_rwS<- count(train,c("Year", "months"))
+adf.test(crime_rwS$months, alternative = "stationary")
+```
+
+```{r}
+#------------ Another unit root test : Philips-Perron test -------
+PP.test(crime_rwS$months)
+```
+
+```{r}
+# ------------     Seasonal Trend Decomposition in R  --------
+
+#The Seasonal Trend Decomposition using Loess (STL) is an algorithm that was developed 
+#to help to divide up a time series into three components namely: the trend, seasonality and remainder.
+
+myts <- ts(crime_rwS[,2], start=c(2009, 1), end=c(2014, 12), frequency=12) 
+crime.stl <- stl(myts, s.window="periodic")
+plot(crime.stl)
+```
