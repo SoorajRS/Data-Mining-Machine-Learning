@@ -1,0 +1,112 @@
+---
+title: "Shetty_S_M8_SVM"
+author: "Sooraj Shetty"
+date: "March 20, 2017"
+output: word_document
+---
+
+```{r}
+library(kernlab)
+library(e1071)
+library(ggplot2)
+library(openxlsx)
+```
+
+Loading my data - Abalone Data Set 
+
+```{r}
+data_url <- 'http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data'
+ABA <- read.csv(url(data_url),sep=",",header = FALSE)
+colnames(ABA) <- c("Sex","Length","Diameter","Height","WholeWeight","ShuckedWeight","VisceraWeight","ShellWeight","Rings")
+head(ABA)
+summary(ABA)
+```
+
+```{r}
+ABAsvm <- ABA[c("Sex","Length","Diameter","Height","WholeWeight","ShuckedWeight","VisceraWeight","ShellWeight","Rings")]
+ABAsvm$Sex <- as.factor(ABAsvm$Sex)
+head(ABAsvm)
+str(ABAsvm)
+```
+
+Divide Training Data into x (containing all features) and y (containing classes)
+
+```{r}
+x <- ABAsvm[c("Sex","Length","Diameter","Height","WholeWeight","ShuckedWeight","VisceraWeight","ShellWeight","Rings")]
+y <- ABAsvm$Sex
+```
+
+Creating SVM Models and summary of each model
+
+```{r}
+svm_model_rad <- svm(ABAsvm$Sex ~ ., data=ABAsvm, kernel="radial")
+summary(svm_model_rad)
+
+svm_model_lin <- svm(ABAsvm$Sex ~ ., data=ABAsvm, kernel="linear")
+summary(svm_model_lin)
+
+svm_model_sig <- svm(ABAsvm$Sex ~ ., data=ABAsvm, kernel="sigmoid")
+summary(svm_model_sig)
+
+svm_model_pol <- svm(ABAsvm$Sex ~ ., data=ABAsvm, kernel="polynomial")
+summary(svm_model_pol)
+```
+
+See the confusion matrix result of prediction, using command table to compare the result of SVM prediction and the class data in y variable.
+
+```{r}
+predR <- predict(svm_model_rad,x)
+table(predR,y)
+a1 <- predR == y
+table(a1)
+
+predL <- predict(svm_model_lin,x)
+table(predL,y)
+a2 <- predL == y
+table(a2)
+
+predS <- predict(svm_model_sig,x)
+table(predS,y)
+a3 <- predS == y
+table(a3)
+
+predP <- predict(svm_model_pol,x)
+table(predP,y)
+a4 <- predP == y
+table(a4)
+```
+
+We can see from all the above confusion matrices that svm_model_rad is showing most correct predictions, so we will further tune svm_model_rad to find best cost and gamma
+
+Tuning SVM to find the best cost and gamma.
+
+```{}
+# I am facing the following error when I run this section of the code
+
+#NAs introduced by coercion
+#Error in if (any(co)) { : missing value where TRUE/FALSE needed
+
+# Could not rectify this chunk of the code.
+
+svm_tune <- tune(svm, train.x=x, train.y=y, kernel="radial", ranges=list(cost=c(0.01,0.1,1,2,5,10), gamma=c(0.1,0.2,0.5,1,1.5,2)))
+print(svm_tune)
+```
+
+You can create svm model again and try to run again
+
+```{r}
+
+svm_model_after_tune <- svm(ABAsvm$Sex ~ ., data=ABAsvm, kernel="radial", cost=1, gamma=0.125)
+
+summary(svm_model_after_tune)
+```
+
+Run Prediction again with new model
+See the confusion matrix result of prediction, using command table to compare the result of SVM prediction and the class data in y variable.
+
+```{r}
+pred <- predict(svm_model_after_tune,x)
+table(pred,y)
+a5 <- pred == y
+table(a5)
+```
