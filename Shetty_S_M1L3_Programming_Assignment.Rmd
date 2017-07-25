@@ -1,0 +1,160 @@
+---
+title: "Shetty_S_M1L3_Programming Assignment"
+output: word_document
+---
+
+Installing additional packages for the assignment - ggplot2
+
+install.packages("ggplot2")
+
+```{r}
+require(ggplot2)
+```
+
+Load the file M01_quasi_twitter.csv
+
+```{r}
+twit <- read.csv(file="M01_quasi_twitter.csv",header=TRUE,sep=",")
+```
+
+The structure of the data and the columns names
+
+```{r}
+str(twit)
+names(twit)
+```
+
+##How is the data distributed?
+
+####Created at month, day, year
+
+```{r echo=FALSE}
+summary(twit$created_at_month)
+qplot(created_at_month, data=twit, geom = "bar") + scale_x_discrete()
+qplot(created_at_day,data=twit,geom="histogram")
+qplot(created_at_year,data=twit,geom="histogram")
+```
+
+A columns created_at_month and created_at_day are uniformly distributed across all 12 calendar months. 
+
+The histogram visually displays the same skew in the data toward the beginning of the year, and more specifically shows that March, April, and February are the most popular months for new accounts. There is a spike in the number of accounts created during years 2009-2010.
+
+```{r}
+qplot(dob_day,data=twit,geom="histogram",binwidth=1)
+```
+
+The number of users having date of birth as January 1st is higher as compared to other dates. This would mean that when people are creating accounts in Twitter they use the default date. This data may not be accurate in most cases.
+
+####Twitter data by country
+
+```{r}
+summary(twit$country)
+```
+
+Summary shows that one country, the USA has most users signed up. India and Canada have nearly 1000 in this data set.
+
+```{r}
+qplot(country, data=twit, color=I('#17331F'), fill=I('#CC0000'))+coord_flip()
+```
+
+#### Location
+
+Location looks like a uniform distribution with a few outliers. 
+
+```{r}
+qplot(x=country, data=twit, geom="bar")
+```
+
+####Friends_count
+
+From the summary statistics we can see that this data is heavily skewed as the median and 3rd Quartile are less than the mean and the max is approximately 60X greater than the mean. There is also some faulty data as the minimum data value is -84, which is not possible for a friend count as negative number of friends do not exist. That would mean someone has no friends but 84 non-friends, say enemies which would not be common knowledge on social networking sites like twitter.
+
+```{r}
+qplot(data=twit, x=friends_count)
+summary(twit$friends_count)
+
+```
+
+Similarly, we can plot for other columns as shown below:
+
+```{r}
+qplot(followers_count,data=twit,geom="histogram")
+qplot(statuses_count,data=twit,geom="histogram")
+qplot(favourites_count,data=twit,geom="histogram")
+qplot(favourited_count,data=twit,geom="histogram")
+qplot(dob_day,data=twit,geom="histogram",binwidth=1)
+qplot(dob_month,data=twit,geom="histogram",binwidth=1)
+qplot(dob_year,data=twit,geom="histogram",binwidth=1)
+qplot(mobile_favourites_count,data=twit,geom="histogram")
+qplot(mobile_favourited_count,data=twit,geom="histogram")
+qplot(education,data=twit,geom="histogram")
+qplot(experience,data=twit,geom="histogram")
+```
+
+We can also plot using density plots.
+
+```{r}
+qplot(age,data=twit,geom="density")
+qplot(wage,data=twit,geom="density")
+```
+
+## Are there anomalies/outliers?
+
+Anamolies/outliers can be found using boxplots.
+
+```{r}
+boxplot(twit$age)
+boxplot(twit$friends_count)
+```
+
+Violin Charts can also be used to find outliers.
+
+```{r}
+qplot(1,mobile_favourites_count, data=twit,xlab = "Outlier in mobile_favourites_count")+geom_violin()
+qplot(1,mobile_favourited_count, data=twit,xlab = "Outlier in mobile_favourited_count")+geom_violin()
+qplot(1,education, data=twit,xlab = "Peaks are outliers in education")+geom_violin()
+qplot(1,experience, data=twit,xlab = "Outliers in experience")+geom_violin()
+```
+
+
+## Can you identify the following - 
+
+* useful raw data and transforms (e.g. log(x))
+* data quality problems
+* outliers
+* subsets of interest
+
+One of the useful data transform can be for friends_count
+
+It looks like a fat-tailed distribution. This implies that there is a small subset of users who have lot of friends, but most users don't have many. This can be visualized easily on a log-scaled plot.
+
+```{r}
+qplot(x=log(friends_count+1,2), data=twit)
+```
+
+Similarly, for favourites_count, we can visualize subset of data better using log-scaled plot.
+
+```{r}
+qplot(x=log(favourites_count+1,2), data=twit)
+```
+
+
+Some data quality problems are 
+
+* negative values in age, experience and friends_count. This can be inferred from box plots/violin plots
+
+* Fake age entries
+
+## Functional Relationships
+
+In the assignment to show functional relationship I have chosen age and wage as the parameters. Following are my observations - 
+
+* It shows that across all age groups men report making much more than women 
+
+* There seems to be a limit to the wage that women report at around the 50 mark
+
+* The same rule does not apply to men as they seem to be earning beyond the age 50 mark
+
+```{r}
+ggplot(twit, aes(x = age, y = wage, colour=gender)) + geom_point()
+```

@@ -1,0 +1,454 @@
+---
+title: "Shetty_S_M1L2_Programming_Assignment"
+output: word_document
+---
+
+Installing necessary packages for the assignment
+
+install.packages("ggplot2")
+
+install.packages("gridExtra")
+
+install.packages("moments")
+
+install.packages("reshape2")
+
+
+Loading the packages
+
+```{r}
+require(ggplot2)
+require(gridExtra)
+require(moments)
+require(reshape2)
+```
+
+##Replication of fat-tailed Cauchy distribution
+Replicate and plot the fat-tailed Cauchy distributions from https://en.wikipedia.org/wiki/Cauchy_distribution
+
+Cauchy Distribution can be quickly generated using Density, distribution function, quantile function and random generation for the Cauchy distribution with location parameter location and scale parameter scale.
+
+_Usage_
+
+* dcauchy(x, location = 0, scale = 1, log = FALSE)
+* pcauchy(q, location = 0, scale = 1, lower.tail = TRUE, log.p = FALSE)
+* qcauchy(p, location = 0, scale = 1, lower.tail = TRUE, log.p = FALSE)
+* rcauchy(n, location = 0, scale = 1)
+
+##Replication of Cauchy Probability Density Function
+
+```{r}
+trials<-10000
+cauchy_dist <-data.frame(cauchy1=rcauchy(n=trials,location=0, scale=0.5), cauchy2=rcauchy(n=trials, location=0, scale=1), cauchy3=rcauchy(n=trials, location=0,scale=2), cauchy4=rcauchy(n=trials, location=-2, scale=1))
+
+cauchy<- melt(data=cauchy_dist, variable.name ="locationshape", value.name="x")
+head(cauchy)
+
+qplot(data=cauchy, x=x, color=locationshape, geom='density')+scale_x_continuous(limits=c(-5,5),breaks=seq(-5,5,1))+ylab('Probability(x)')+ scale_color_discrete(name="Location and Shape Parameters", labels=c("Location=0, Shape=0.5","Location=0, Shape=1", "Location =0, Shape=2", "Location=-2, Shape=1"))
+```
+
+##Load the csv file
+
+```{r}
+m1 <- read.csv(file="M1L2Q1.csv",header=TRUE,sep=",")
+str(m1)
+set.seed(333)
+trials<-dim(m1)[1]
+```
+
+Ansering the following questions - 
+
+  * How is the data distributed? [DATA DISTRIBUTION]
+  * What are the summary statistics? [SUMMARY STATISTICS]
+  * Are there anomalies/outliers? [ANOMALIES/OUTLIERS]
+  * Try to regenerate the data in each column and plot your regenerated data versus the original data using a faceted graph. How does it compare? [REGENERATED DATA]
+  
+###COLUMN A###
+
+##DATA DISTRIBUTION
+
+Based on the QQ plot below, the distribution of column A data looks to be normal distribution.
+
+```{r}
+qqnorm(m1$A)
+qqline(m1$A)
+```
+
+##SUMMARY STATISTICS
+
+```{r}
+summary(m1$A)
+head(m1$A)
+```
+
+The data for column A is continuous and looks to have a mean and median that are similar, indicating minimal skewness. A closer examination of the data skewness of column A provides skewness and Kurtosis values of:
+
+```{r}
+library(moments)
+skewness(m1$A)
+kurtosis(m1$A)
+```
+
+This positive skewness value of 0.1276357 indicates that the data are spread out slightly towards the right. The kurtosis value of 2.804903 is slightly smaller than the reference Gaussian kurtosis of 3 indicating a slightly sharper peak than the standard Gaussian distrbution.
+
+##ANOMALIES/OUTLIERS
+
+To visualize the data distribution of column A and look for outliers, the following box plot and histogram are shown:
+
+```{r}
+boxplot(m1$A,names=c("column A"),show.names=T)
+```
+
+The box plot shows only one extreme value just above the top whisker (unfilled circle) indicating a suspected outlier. The horizontal line representing the median shows equal number of data points above and below the median. The upper whisker appears to be only slightly shorter than the lower whisker.
+
+```{r}
+qplot(x=m1$A,data=m1,geom='blank') + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1) + labs(x = "column A") + geom_rug()
+```
+
+The histogram of column A data shows most data points are concentrated around the median. 
+
+##REGENERATED DATA
+
+A random data set was generated below using a normal distribution and compared the distribution of column A data.
+
+```{r}
+mean_A<-mean(m1$A)
+sd_A<-sd(m1$A)
+my_normA<-rnorm(trials,mean=mean_A,sd=sd_A)
+```
+
+The summaries of each data set are somewhat similar:
+
+```{r}
+summary(my_normA)
+summary(m1$A)
+```
+
+__FACETED GRAPH: Column A Data and Regenerated Data__
+
+The column A data are shown on the left and my simulated data are shown on the right.
+
+```{r}
+dataA <- c(m1$A,my_normA)
+df_A <- data.frame(dataA,c(rep("colA",333),rep("myNormA",333)))
+colnames(df_A) <- c("data","dist")
+qplot(x=dist,y=data,data=df_A,geom="boxplot")
+qplot(dataA,data=df_A,geom='blank') + facet_wrap(~dist) + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1)
+```
+
+A visual comparison of the box plots and histograms of two data set show a similar structure.
+
+###COLUMN B###
+
+##DATA DISTRIBUTION
+
+Based on the QQ plot below, the distribution of column B data looks to be normal distribution.
+
+```{r}
+qqnorm(m1$B)
+qqline(m1$B)
+```
+
+##SUMMARY STATISTICS
+
+```{r}
+summary(m1$B)
+head(m1$B)
+```
+
+The data for column B are continuous, and looks to have a mean and median that are similar, indicating minimal skewness. A closer examination of the data skewness of column B provides skewness and Kurtosis values of:
+
+```{r}
+skewness(m1$B)
+kurtosis(m1$B)
+```
+
+This positive skewness value of 0.06372024 indicates that the data are spread out very slightly towards the right. The kurtosis value of 3.096818 is very close to the reference Gaussian kurtosis of 3 indicating a peak similar to the peak of the the standard Gaussian distrbution.
+
+##ANOMALIES/OUTLIERS
+
+To visualize the data distribution of column B and look for outliers, the following box plot and histogram are shown:
+
+```{r}
+boxplot(m1$B,names=c("column B"),show.names=T)
+```
+
+The box plot shows two extreme values just above the top whisker and one just below the bottom whisker (unfilled circles) indicating suspected outliers. The horizontal line representing the median shows equal number of data points above and below the median. The whiskers appear to be of similar length.
+
+```{r}
+qplot(x=m1$B,data=m1,geom='blank') + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1) + labs(x = "column B") + geom_rug()
+```
+
+The histogram of column B data shows most data points are concentrated around the median.
+
+##REGENERATED DATA
+
+A random data set was generated below using a normal distribution and compared the distribution of column B data.
+
+```{r}
+mean_B<-mean(m1$B)
+sd_B<-sd(m1$B)
+my_normB<-rnorm(trials,mean=mean_B,sd=sd_B)
+```
+
+The summaries of each data set are somewhat similar:
+
+```{r}
+summary(my_normB)
+summary(m1$B)
+```
+
+__FACETED GRAPH: Column B Data and Regenerated Data__
+
+The column B data are shown on the left and my simulated data are shown on the right.
+
+```{r}
+dataB<-c(m1$B,my_normB)
+df_B<-data.frame(dataB,c(rep("colB",333),rep("myNormB",333)))
+colnames(df_B)<-c("data","dist")
+qplot(x=dist,y=data,data=df_B,geom="boxplot")
+qplot(dataB,data=df_B,geom='blank') + facet_wrap(~dist) + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1)
+```
+
+A visual comparison of the box plots and histograms of two data set show a similar structure.
+
+###COLUMN C###
+
+##DATA DISTRIBUTION
+
+Because the data of column C is discrete, I suspect its distribution is a binomial distribution.
+
+##SUMMARY STATISTICS
+
+```{r}
+summary(m1$C)
+```
+
+The data for column C are discrete and has a mean and median that are similar, indicating minimal skewness. A closer examination of the data skewness of column C provides skewness and Kurtosis values of:
+
+```{r}
+skewness(m1$C)
+kurtosis(m1$C)
+```
+
+This negative skewness value of -0.3306065 indicates that the data are spread out very slightly towards the left The kurtosis value of 2.784658 is smaller than the reference Gaussian kurtosis of 3 indicating a more pointed peak than the peak of the the standard Gaussian distribution.
+
+##ANOMALIES/OUTLIERS
+
+To visualize the data distribution of column C and look for outliers, the following box plot and histogram are shown:
+
+```{r}
+boxplot(m1$C,names=c("column C"),show.names=T)
+```
+
+The box plot shows no extreme values indicating no outliers. The horizontal line representing the median shows equal number of data points above and below the median. The top whisker appears to be of shorter than the bottom whisker indicating that a large portion of the data are concentrated in the short range between the third quartile (7) and the maximum value (9).
+
+```{r}
+qplot(x=m1$C,data=m1,geom='blank') + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1) + labs(x = "column C") + geom_rug()
+```
+
+The histogram of column C data shows that the data points are not concentrated around the median. 
+
+##REGENERATED DATA
+
+A random data set was generated below using a binomial distribution, where n=333, size=10, and probability=0.6. These parameters were optimized by trial and error. This simulated data set was  compared the distribution of column C data.
+
+```{r}
+my_binomC<-rbinom(n=trials,size=10,prob=0.6)
+```
+
+The summaries of each data set are somewhat similar:
+
+```{r}
+summary(my_binomC)
+summary(m1$C)
+```
+
+__FACETED GRAPH: Column C Data and Regenerated Data__
+
+The column C data are shown on the left and my simulated data are shown on the right.
+
+```{r}
+dataC<-c(m1$C,my_binomC)
+df_C<-data.frame(dataC,c(rep("colC",333),rep("myBinomC",333)))
+colnames(df_C)<-c("data","dist")
+qplot(x=dist,y=data,data=df_C,geom="boxplot")
+
+qplot(dataC,data=df_C,geom='blank') + facet_wrap(~dist) + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1)
+```
+
+These two plots show fairly similar structures. In addition, the QQ plot of column C data versus my simulated data show a similar trend. Based on these results, distribution of column C data is binomial distribution.
+
+```{r}
+qqplot(my_binomC,m1$C,ylab="column C")
+```
+
+###COLUMN D###
+
+##DATA DISTRIBUTION
+
+Because the data of column D is discrete, I suspect the distribution is either binomial or poisson distribution.
+
+##SUMMARY STATISTICS
+
+```{r}
+summary(m1$D)
+head(m1$D)
+```
+
+The data for column D are discrete, and looks to have a mean and median that are similar, indicating minimal skewness. A closer examination of the data skewness of column D provides skewness and Kurtosis values of:
+
+```{r}
+skewness(m1$D)
+kurtosis(m1$D)
+```
+
+This positive skewness value of 0.4592872 indicates that the data are spread out slightly towards the right. The kurtosis value of 3.131259 is slightly larger than the reference Gaussian kurtosis of 3 indicating a more rounded peak than the standard Gaussian distribution.
+
+##ANOMALIES/OUTLIERS
+
+To visualize the data distribution of column D and look for outliers, the following box plot and histogram are shown:
+
+```{r}
+boxplot(m1$D,names=c("column D"),show.names=T)
+```
+
+The box plot shows only one extreme value just above the top whisker (unfilled circle) indicating a suspected outlier. The horizontal line representing the median shows equal number of data points above and below the median. The upper whisker appears to be only slightly longer than the lower whisker.
+
+```{r}
+qplot(x=m1$D,data=m1,geom='blank') + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1) + labs(x = "column D") + geom_rug()
+```
+
+The histogram of column D data shows that the data points are not concentrated around the median.
+
+##REGENERATED DATA
+
+A random data set was generated below using a poisson distribution, where n=333 and lambda=9. These parameters were optimized by trial and error. This simulated data set was compared the distribution of column D data.
+
+```{r}
+my_poisD<-rpois(n=trials,lambda=9)
+```
+
+The summaries of each data set are somewhat similar:
+
+```{r}
+summary(my_poisD)
+summary(m1$D)
+```
+
+__FACETED GRAPH: Column D Data and Regenerated Data__
+
+The column D data are shown on the left and my simulated data are shown on the right.
+
+```{r}
+dataD<-c(m1$D,my_poisD)
+df_D<-data.frame(dataD,c(rep("colD",333),rep("myPoisC",333)))
+colnames(df_D)<-c("data","dist")
+qplot(x=dist,y=data,data=df_D,geom="boxplot")
+
+qplot(dataD,data=df_D,geom='blank') + facet_wrap(~dist) + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1)
+```
+
+These two plots show fairly similar structures. In addition, the QQ plot of column D data versus my simulated data show a similar trend. Based on these results, distribution of column D data are poisson.
+
+```{r}
+qqplot(my_poisD,m1$D,ylab="column D")
+```
+
+###COLUMN E###
+
+##DATA DISTRIBUTION
+
+Base on the above results the distribution of column E looks like a uniform distribution.
+
+##SUMMARY STATISTICS
+
+```{r}
+summary(m1$E)
+head(m1$E)
+```
+
+The data for column E are continuous, and looks to have a mean and median that are different, with the mean less than the median indicating a skew to the left. A closer examination of the data skewness of column E provides skewness and Kurtosis values of:
+
+```{r}
+skewness(m1$E)
+kurtosis(m1$E)
+```
+
+This negative skewness value of -0.08634286 also indicates that the data are spread out slightly towards the left. The kurtosis value of 1.85588 is smaller than the reference Gaussian kurtosis of 3 indicating a sharper peak than the standard Gaussian distrbution.
+
+##ANOMALIES/OUTLIERS
+
+To visualize the data distribution of column E and look for outliers, the following box plot and histogram are shown:
+
+```{r}
+boxplot(m1$E,names=c("column E"),show.names=T)
+```
+
+The box plot shows only no extreme values indicating there are no outliers. The horizontal line representing the median shows more data points above the median than below the median. The upper whisker appears to be only slightly shorter than the lower whisker. 
+
+```{r}
+qplot(x=m1$E,data=m1,geom='blank') + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1) + labs(x = "column E") + geom_rug()
+```
+
+The histogram of column E data shows that the data points are not concentrated around the median but are spread out.
+
+##REGENERATED DATA
+
+A random data set was generated below using a uniform distribution, where n=333, minimum=33, and maximum=332. These parameters are based on the minimum and maximum values of column E data. This simulated data set was compared the distribution of column E data.
+
+```{r}
+my_uniE<-runif(n=trials,min=33,max=332)
+```
+
+The summaries of each data set are similar:
+
+```{r}
+summary(my_uniE)
+summary(m1$E)
+```
+
+__FACETED GRAPH: Column E Data and Regenerated Data__
+
+The column E data are shown on the left and my simulated data are shown on the right.
+
+```{r}
+dataE<-c(m1$E,my_uniE)
+df_E<-data.frame(dataE,c(rep("colE",333),rep("myUniE",333)))
+colnames(df_E)<-c("data","dist")
+qplot(x=dist,y=data,data=df_E,geom="boxplot")
+
+qplot(dataE,data=df_E,geom='blank') + facet_wrap(~dist) + geom_line(aes(y=..density..),stat='density') +
+  geom_histogram(aes(y=..density..),alpha =0.4,binwidth=1)
+```
+
+These two plots show fairly similar structures. In addition, the QQ plot of column E data versus my simulated data show a similar trend. Based on these results, distribution of column E data are uniform.
+
+```{r}
+qqplot(my_uniE,m1$E,ylab="column E")
+```
+
+###SUMMARY###
+
+In conclusion the distributions of the data in each column of the given data set is:
+
+    DATA      |   DISTRIBUTION
+  
+     A        |   Normal
+     
+     B        |   Normal
+     
+     C        |   Binomial
+     
+     D        |   Poisson
+     
+     E        |   Uniform
