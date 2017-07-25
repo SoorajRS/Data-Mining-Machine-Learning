@@ -1,0 +1,194 @@
+---
+title: "Text Mining - Module 12"
+author: "Sooraj Shetty"
+date: "April 17, 2017"
+output: word_document
+---
+
+Loading required packages 
+
+```{r}
+require(tm)
+require(wordcloud)
+require(RTextTools)
+require(SnowballC)
+require(e1071)
+require(qdap)
+```
+
+# Data
+
+For the purpose of this assignment I will be using Dr. Suess qoutes [from the lesson] to perform text mining.
+
+```{r}
+quote <- c("You have brains in your head.",
+           "You have feet in your shoes.", 
+           "You can steer yourself any direction you choose.",            
+           "You're on your own.", 
+           "And you know what you know.", 
+           "And YOU are the one who'll decide where to go...")
+```
+
+Create a term by document matrix for the Dr. Suess quote. Assume each sentence is a new document.
+
+```{r}
+
+for(i in seq(quote)){ 
+  quote[i] <- gsub("'re", " are", quote[i])   
+  quote[i] <- gsub("'ll", " will", quote[i])
+}
+
+quote_corpus <- Corpus(VectorSource(quote))
+# quote_corpus2 <- Corpus(DataframeSource(data.frame(quote)))
+
+for(i in seq(quote_corpus)){
+  writeLines(as.character(quote_corpus[[i]]))
+}
+
+## Clean the corpus
+
+quotes_clean <- tm_map(quote_corpus,removePunctuation)           ## Remove the punctuations
+
+for(i in seq(quotes_clean)){
+  writeLines(as.character(quotes_clean[[i]]))
+}
+
+quotes_clean <- tm_map(quotes_clean,content_transformer(tolower))     ## Convert to lower case
+
+for(i in seq(quotes_clean)){
+  writeLines(as.character(quotes_clean[[i]]))
+}
+
+quotes_clean <- tm_map(quotes_clean,removeWords,stopwords("english"))    ## Remove the stop words
+
+for(i in seq(quotes_clean)){
+  writeLines(as.character(quotes_clean[[i]]))
+}
+
+quotes_clean <- tm_map(quotes_clean,stripWhitespace)    ## Remove whitespaces
+
+for(i in seq(quotes_clean)){
+  writeLines(as.character(quotes_clean[[i]]))
+}
+
+
+dtm <- DocumentTermMatrix(quotes_clean)    ## Creates the Document Term Matrix
+inspect(dtm)
+
+# We can see empty documents in our Document Matrix, therefore we will reomve them and create the matrix again
+
+rowTotals <- apply(dtm , 1, sum)
+empty.rows <- as.vector(which(rowTotals==0))
+
+quotes_clean <- quotes_clean[-as.numeric(empty.rows)]
+
+dtm <- DocumentTermMatrix(quotes_clean)
+inspect(dtm)
+
+tdm <- TermDocumentMatrix(quotes_clean)    # Creates the Term Document Matrix
+inspect(tdm)
+
+
+```
+
+* Calculate the tf-idf for the three terms in the text. Assume each sentence is a new document.
+
+```{r}
+
+# Below is the term frequency (tf) for the documnet matrix
+
+inspect(dtm)
+
+# Below is the normalized term frequency*inverse document frequency (tf-idf)
+
+terms <- DocumentTermMatrix(quotes_clean,control = list(weighting = function(x) weightTfIdf(x, normalize = TRUE)))
+inspect(terms)
+
+# Below is the non-normalized term frequency*inverse document frequency (tf-idf). It just give the idf for all the terms in the document
+
+terms <- DocumentTermMatrix(quotes_clean,control = list(weighting = function(x) weightTfIdf(x, normalize = FALSE)))
+inspect(terms)
+
+```
+
+* Write a regular expression to segment the quote into separate sentences.
+
+```{r}
+
+quote <- c("You have brains in your head. You have feet in your shoes. You can steer yourself any direction you choose.
+           You're on your own. And you know what you know. And YOU are the one who'll decide where to go...")
+
+q1 <- unlist(strsplit(quote,"[.]"))
+
+for(i in seq(q1)){
+  q1 <- gsub("(^\\n)\\s+","",q1) 
+  q1 <- gsub("^\\s+","",q1)
+}
+q1 <- q1[-c(grep("^$|^ $",q1))]
+
+print(q1)
+
+```
+
+* Write a regular expression to tokenize the quote.
+
+```{r}
+
+q1 <- gsub("'re"," are",q1)
+q1 <- gsub("'ll"," will",q1)
+quote_tokens <- unlist(strsplit(q1,"\\s"))
+quote_tokens <- tolower(quote_tokens)
+quote_tokens <- unique(quote_tokens)
+
+print(quote_tokens)
+
+```
+
+* Create a frequency signaure for the quote . Assume each sentence is a new document.
+
+```{r}
+
+# Determining Frequency Signature
+
+mymatrix <- as.matrix(tdm)
+f1 <- sort(rowSums(mymatrix), decreasing=TRUE)
+
+# Below is the frequency of each term in the corpus
+f1
+
+```
+
+The contingency table for a word pair (brains, know) will be calculated as follows.
+
+Total number of words in the corpus = 13
+Frequency of word 'brains' = 1
+Frequency of word 'know' = 2
+Co-occurence of the words 'brains' and 'know' = 0 Since these words don't occur together in any document of the corpus.
+
+Contingency table for word pair (brains, know) will be represented as:
+      
+                 .  brains    !brains
+
+            . know    0       2
+
+            . !know   1       10
+
+
+
+
+```
+
+The contingency table for a word pair (brains, know) will be calculated as follows.
+
+Total number of words in the corpus = 13
+Frequency of word 'brains' = 1
+Frequency of word 'know' = 2
+Co-occurence of the words 'brains' and 'know' = 0 Since these words don't occur together in any document of the corpus.
+
+Contingency table for word pair (brains, know) will be represented as:
+      
+                 .  brains    !brains
+
+            . know    0       2
+
+            . !know   1       10
