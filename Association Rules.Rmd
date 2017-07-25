@@ -1,0 +1,164 @@
+---
+title: "Shetty S Module 5 - Association Rules"
+author: "Sooraj Shetty"
+date: "2/20/2017"
+output: word_document
+---
+
+This homework assignment focuses on Association Rules.
+
+## Additional packages needed
+ 
+Additional packages that are required.
+
+* If necessary install following packages.
+
+
+```{r}
+# `install.packages("arules");`
+# `install.packages("arulesViz");`
+# `install.packages("Matrix")`
+```
+
+
+```{r}
+require("arules")
+require("arulesViz")
+require("Matrix")
+```
+
+The data set I am using for the assignment is Adult data set
+
+```{r}
+data_url <- 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data'
+adultS <- read.transactions(url(data_url))
+summary(adultS)
+head(adultS)
+```
+
+```{r}
+# look at the first transactions
+inspect(adultS[1:6])
+# Look at the frequency 
+itemFrequency(adultS[1:100, 1:10])
+```
+
+```{r}
+# plot the frequency 
+itemFrequencyPlot(adultS,support=0.1)
+```
+
+```{r}
+itemFrequencyPlot(adultS,topN=20)
+```
+
+Visualization of transactions
+
+```{r}
+image(adultS[1:10])
+```
+
+```{r}
+image(sample(adultS, 100))
+```
+* Generate a set of 50 or so (non-redundant) rules.
+
+```{r}
+adultS.rules<-apriori(adultS)
+summary(adultS.rules)
+```
+
+```{r}
+adultS.rules
+```
+
+Improving model performance.
+
+```{r}
+adultS.rules.2 <- apriori(adultS, parameter = list(support = 0.01, confidence = 0.50, minlen = 2))
+adultS.rules.2
+```
+
+```{r}
+summary(adultS.rules.2)
+```
+
+
+```{r}
+# converting the rule set to a data frame
+adultSdataframe<- as(adultS.rules.2, "data.frame")
+str(adultSdataframe)
+```
+
+Pruning redundant rules.
+
+```{r}
+adultSrules.2.test=adultS.rules.2[1:500] #First 500 rows
+subset.matrix <- is.subset(adultSrules.2.test, adultSrules.2.test)
+subset.matrix[lower.tri(subset.matrix, diag=T)] <- NA
+redundant <- colSums(subset.matrix, na.rm=T) >= 1
+which(redundant)
+```
+
+```{r}
+# remove redundant rules
+rules.pruned <- adultSrules.2.test[!redundant]
+inspect(rules.pruned)
+```
+
+
+* Which rules make sense to you? Highlight the five best and five worst of your rule set. 
+
+{5th-6th,}               => {3,}                  0.01022664 1.0000000  87.7681941
+{Doctorate,}             => {16,}                 0.01268350 1.0000000  52.6893204
+{12th,}                  => {8,}                  0.01329771 1.0000000  56.5312500
+{9th,}                   => {5,}                  0.01578527 1.0000000  57.0262697
+{7th-8th,}               => {4,}                  0.01983908 1.0000000  46.7173601
+
+The above rules look like the best since they have low support high confidence and high lift. 
+
+{21,}                    => {United-States,}      0.02054542 0.8991935   1.0037552
+{21,}                    => {White,}              0.01974694 0.8642473   1.0117062
+{21,}                    => {<=50K}               0.02269517 0.9932796   1.3083806
+{18,}                    => {0,}                  0.01904060 1.0000000   1.0000307
+{19,}                    => {United-States,}      0.02057613 0.9241379   1.0316003
+
+The above rules look like the worst because of their high support and lower confidence and lift value. 
+
+
+* How did you choose the level of support and confidence? 
+
+Higher level of confidence and lower level of support is  preferable. So, we set support at 0.01 and confidence at 0.5.
+
+* What is the lift and conviction of your best and worst rules? 
+
+Lift for best and worst rules are shown above.
+
+Convicrion is calculated below.
+
+Conviction:
+
+```{r}
+conviction <- interestMeasure(rules.pruned, "conviction", transactions=adultS)
+rules.conviction<-as(rules.pruned, "data.frame")
+rules.conviction<-data.frame(rules.conviction, conviction)
+rules.conviction
+```
+
+* Visualize your 50 association rules. Where do the best and worst end up in your plot? 
+
+```{r}
+plot(adultS.rules.2)
+```
+
+```{r}
+plot(adultSrules.2.test)
+```
+
+```{r}
+plot(adultSrules.2.test, method="graph", control=list(type="items"))
+```
+
+* Does the model make sense?
+
+The model makes sense. Each number represents one item. Also, the rules are valuable since it would be beneficial from using them by analyzing values for each role.
